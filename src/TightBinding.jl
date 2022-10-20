@@ -1,6 +1,7 @@
 module TightBinding
 
 using LinearAlgebra
+using Documenter
 
 export dual, intralayerblock, intralayerhamiltonian, brillouinzone, occupancymatrix, meanfieldmatrix
 
@@ -100,8 +101,8 @@ end
 function meanfieldmatrix(vectors, occupancy)
 
     """
-    Given the occupancy matrix O of bands and matrix of eigenvectors P, 
-    calculate the product `POP^{†}`.
+    Given the occupancy matrix Λ of bands and matrix of eigenvectors P, 
+    calculate the product `PΛP^{†}`.
     """
 
     return vectors*(occupancy*vectors')
