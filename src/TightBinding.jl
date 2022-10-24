@@ -3,10 +3,11 @@ module TightBinding
 using LinearAlgebra
 using Documenter
 using StaticArrays
+using Distributed
 
 export  dual, intralayerblock, intralayerhamiltonian, brillouinzone, 
         occupancymatrix, meanfieldmatrix, phasematrix, meanfieldpartial,
-        meanfielditerator, meanfieldupdate
+        meanfielditerator, meanfieldupdate, runtoconvergence, randomrepeat
 
 function dual(u1, u2)
     
@@ -60,7 +61,7 @@ function intralayerblock(K, J, Γ, uK, uJ, uΓ, uC, alpha)
     j = beta + 2
     k = gamma + 2
     
-    U = zeros(Float64, 4, 4)
+    U = zeros(ComplexF64, 4, 4)
 
     U[1, 1] = (K+J)*uK + 2Γ*uΓ + 2J*uJ
     U[i, i] = (K+J)*uC
@@ -139,8 +140,7 @@ function meanfielditerator(K, J, Γ, init_fields, brillouin_zone, nearest_neighb
 
     block_list = [intralayerblock(K, J, Γ, uK, uJ, uΓ, uC, i-1) for i in 1:3]
     N = 2*Int(length(brillouin_zone))
-    display(brillouin_zone)
-    println(N)
+
     new_fields = zeros(ComplexF64, 8, 8)
 
     for k in brillouin_zone
@@ -155,14 +155,43 @@ function meanfielditerator(K, J, Γ, init_fields, brillouin_zone, nearest_neighb
     return new_fields/N
 end
 
-function meanfieldupdate(init_fields, new_fields, mixing)
+function meanfieldupdate(init_fields, new_fields, mixing = 1)
 
     """
     Uses successive over-relaxation/mixed updating to 
     generate new sets of mean-fields for each iteration.
     """
 
-    return (1-mixing)*init_fields + mixing*new_fields
+    return new_fields = (1-mixing)*init_fields .+ mixing*new_fields
+end
+
+function runtoconvergence(K, J, Γ, init_fields, brillouin_zone, nearest_neighbours, mixing = 1, tol = 1e-9, temperature = 0)
+
+    """
+    Given an initial set of mean-fields, run the iterator until all fields converge
+    to the specified precision.
+    """
+
+    n_its = 0
+    not_converged = true
+    new_fields = init_fields
+    while not_converged
+        new_fields = meanfielditerator(K, J, Γ, init_fields, brillouin_zone, nearest_neighbours, 1, temperature)
+        diff = abs.(real.(new_fields - init_fields)[5:8, 1:4])
+        con = diff .> tol
+        not_converged = any(con)
+        n_its += 1
+        init_fields = real.(meanfieldupdate(init_fields, new_fields, mixing))
+    end
+    println(n_its)
+    return init_fields
+end
+
+function randomrepeat(K, J, Γ, brillouin_zone, nearest_neighbours, repeats = 10, mixing = 1, tol = 1e-9, temperature = 0)
+
+    shape = (8, 8, repeats)
+    init_field_arr = rand(Float64, shape).-0.5
+
 
 end
 
