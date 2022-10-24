@@ -4,6 +4,7 @@ using LinearAlgebra
 using Documenter
 using StaticArrays
 using Distributed
+using SharedArrays
 
 export  dual, intralayerblock, intralayerhamiltonian, brillouinzone, 
         occupancymatrix, meanfieldmatrix, phasematrix, meanfieldpartial,
@@ -177,7 +178,7 @@ function runtoconvergence(K, J, Γ, init_fields, brillouin_zone, nearest_neighbo
     new_fields = init_fields
     while not_converged
         new_fields = meanfielditerator(K, J, Γ, init_fields, brillouin_zone, nearest_neighbours, 1, temperature)
-        diff = abs.(real.(new_fields - init_fields)[5:8, 1:4])
+        diff = abs.(real.(new_fields - init_fields))
         con = diff .> tol
         not_converged = any(con)
         n_its += 1
